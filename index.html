@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bibliothèque en Ligne — Démo</title>
+  <meta name="description" content="Démo statique de la Bibliothèque en Ligne (version PHP/MySQL dans le dépôt).">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="nav">
+  <a class="brand" href="#/"><span class="logo">◆</span> Bibliothèque en Ligne</a>
+  <div class="liens">
+    <a href="#/">Accueil</a>
+    <a href="#/wishlist">Ma liste de lecture</a>
+  </div>
+  <div class="lecteur" id="lecteur"></div>
+</nav>
+<div class="container">
+  <div class="alert ok" style="margin-top:16px">
+    Démo statique pour GitHub Pages : les données sont enregistrées dans votre navigateur.
+    L'application complète (PHP + MySQL, gestion CRUD des livres) se trouve dans les fichiers <code>.php</code> du dépôt.
+  </div>
+  <div id="app"></div>
+</div>
+<div class="footer">Bibliothèque en Ligne — Projet final, Développement Web</div>
+
+<script>
+const LIVRES = [
+ {id:1,titre:"Le Petit Prince",auteur:"Antoine de Saint-Exupéry",description:"Un aviateur en panne dans le désert rencontre un petit garçon venu d'une autre planète.",maison:"Gallimard",n:4},
+ {id:2,titre:"Vingt mille lieues sous les mers",auteur:"Jules Verne",description:"Les aventures du capitaine Nemo à bord du Nautilus.",maison:"Hetzel",n:2},
+ {id:3,titre:"Fondation",auteur:"Isaac Asimov",description:"Le début de la saga qui imagine l'effondrement puis la renaissance d'un empire galactique.",maison:"Gnome Press",n:3},
+ {id:4,titre:"Notre-Dame de Paris",auteur:"Victor Hugo",description:"L'histoire d'Esmeralda et de Quasimodo dans le Paris du Moyen Âge.",maison:"Gosselin",n:0},
+ {id:5,titre:"L'Étranger",auteur:"Albert Camus",description:"Meursault, un homme indifférent, face à l'absurdité de l'existence.",maison:"Gallimard",n:5},
+ {id:6,titre:"Une brève histoire du temps",auteur:"Stephen Hawking",description:"Une introduction accessible à la cosmologie moderne.",maison:"Bantam Books",n:1},
+ {id:7,titre:"Les Misérables",auteur:"Victor Hugo",description:"Le parcours de Jean Valjean dans la France du XIXe siècle.",maison:"A. Lacroix",n:2},
+ {id:8,titre:"La Ferme des animaux",auteur:"George Orwell",description:"Une fable politique où des animaux prennent le contrôle de leur ferme.",maison:"Secker & Warburg",n:0}
+];
+const $app = document.getElementById('app');
+const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function load(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(_) { return d; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(_) {} }
+let mem = {flash:null};
+const stock = () => load('stock', {});
+const dispo = l => (stock()[l.id] ?? l.n);
+const lecteur = () => load('lecteur', null);
+const liste = () => { const l = lecteur(); return l ? (load('listes', {})[l.email] || []) : []; };
+
+function card(l){
+  const d = dispo(l);
+  return `<div class="carte-livre"><h3>${e(l.titre)}</h3><div class="auteur">par ${e(l.auteur)}</div>
+  <div class="dispo ${d>0?'oui':'non'}">${d>0?d+' exemplaire(s) disponible(s)':'Aucun exemplaire disponible'}</div>
+  <div class="actions"><a class="btn" href="#/livre/${l.id}">Voir les détails</a></div></div>`;
+}
+const searchForm = q => `<form class="recherche" id="sf" role="search"><input type="search" name="q" value="${e(q)}" placeholder="Titre ou nom d'auteur..." aria-label="Recherche"><button class="btn" type="submit">Rechercher</button></form>`;
+function flash(){ const f = mem.flash; mem.flash = null; return f ? `<div class="alert ${f.t}">${e(f.m)}</div>` : ''; }
+
+function home(){
+  $app.innerHTML = flash() + `<div class="hero"><h1>Bienvenue à la Bibliothèque en Ligne</h1>
+  <p>Notre catalogue compte actuellement <strong>${LIVRES.length}</strong> livre(s). Recherchez un titre ou un auteur, consultez la fiche d'un livre, puis ajoutez-le à votre liste de lecture.</p></div>
+  ${searchForm('')}<h2>Tous les livres</h2><div class="grille-livres">${LIVRES.map(card).join('')}</div>`;
+}
+function results(q){
+  const r = q ? LIVRES.filter(l => norm(l.titre).includes(norm(q)) || norm(l.auteur).includes(norm(q))) : [];
+  $app.innerHTML = `<h1>Résultats de recherche</h1>${searchForm(q)}` +
+    (!q ? `<p class="hint">Saisissez un titre ou un nom d'auteur.</p>` :
+     !r.length ? `<p class="hint">Aucun livre ne correspond à « ${e(q)} ».</p>` :
+     `<p class="hint">${r.length} résultat(s) pour « ${e(q)} ».</p><div class="grille-livres">${r.map(card).join('')}</div>`) +
+    `<p><a class="btn secondary" href="#/">← Retour à l'accueil</a></p>`;
+}
+function details(id){
+  const l = LIVRES.find(x => x.id === id);
+  if (!l){ mem.flash = {t:'error', m:'Livre introuvable.'}; location.hash = '#/'; return; }
+  const d = dispo(l), me = lecteur(), deja = liste().includes(l.id);
+  let action = deja ? `<p class="alert ok">Ce livre est déjà dans votre liste de lecture.</p>`
+    : !me ? `<p class="hint"><a href="#/identification?retour=livre/${l.id}">Identifiez-vous</a> pour ajouter ce livre à votre liste de lecture.</p>`
+    : `<button class="btn" id="add" ${d<=0?'disabled':''}>Ajouter à ma liste de lecture</button>`;
+  $app.innerHTML = flash() + `<h1>${e(l.titre)}</h1><div class="fiche"><dl>
+   <dt>Auteur</dt><dd>${e(l.auteur)}</dd><dt>Maison d'édition</dt><dd>${e(l.maison)}</dd>
+   <dt>Exemplaires disponibles</dt><dd class="dispo ${d>0?'oui':'non'}">${d>0?d+' disponible(s)':'Aucun exemplaire disponible'}</dd>
+   <dt>Description</dt><dd>${e(l.description)}</dd></dl>${action}</div>
+   <p><a class="btn secondary" href="#/">← Retour</a></p>`;
+  const b = document.getElementById('add');
+  if (b) b.onclick = () => {
+    if (dispo(l) <= 0) return;
+    const ls = load('listes', {}); ls[me.email] = [...(ls[me.email]||[]), l.id]; save('listes', ls);
+    const st = stock(); st[l.id] = dispo(l) - 1; save('stock', st);
+    mem.flash = {t:'ok', m:'Livre ajouté à votre liste de lecture.'}; details(id);
+  };
+}
+function wishlist(){
+  const me = lecteur();
+  if (!me){ $app.innerHTML = `<h1>Ma liste de lecture</h1><p class="hint"><a href="#/identification?retour=wishlist">Identifiez-vous</a> pour voir votre liste.</p>`; return; }
+  const items = liste().map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
+  $app.innerHTML = `<h1>Liste de lecture de ${e(me.prenom)} ${e(me.nom)}</h1>` +
+   (items.length ? `<div class="grille-livres">${items.map(card).join('')}</div>` : `<p class="hint">Votre liste est vide.</p>`);
+}
+function ident(retour){
+  const me = lecteur();
+  $app.innerHTML = `<h1>Identification lecteur</h1><p class="hint">Aucun mot de passe : indiquez nom, prénom et email.</p>
+  ${me?`<p class="alert ok">Actuellement identifié·e comme ${e(me.prenom)} ${e(me.nom)} (${e(me.email)}).</p>`:''}
+  <form class="form-lecteur" id="idf"><label>Nom</label><input name="nom" required><label>Prénom</label><input name="prenom" required>
+  <label>Email</label><input type="email" name="email" required><button class="btn" type="submit">Valider</button> <a class="btn secondary" href="#/">Retour</a></form>`;
+  document.getElementById('idf').onsubmit = ev => {
+    ev.preventDefault(); const f = new FormData(ev.target);
+    save('lecteur', {nom:f.get('nom').trim(), prenom:f.get('prenom').trim(), email:f.get('email').trim().toLowerCase()});
+    mem.flash = {t:'ok', m:'Vous êtes identifié·e comme ' + f.get('prenom').trim() + '.'};
+    location.hash = '#/' + (retour || '');
+  };
+}
+function nav(){
+  const me = lecteur();
+  document.getElementById('lecteur').innerHTML = me ? `Identifié·e comme <strong>${e(me.prenom)}</strong> — <a href="#/identification">changer</a>` : `<a href="#/identification">S'identifier comme lecteur</a>`;
+}
+function route(){
+  const [path, qs=''] = location.hash.replace(/^#\/?/, '').split('?');
+  const p = new URLSearchParams(qs); nav();
+  if (path.startsWith('livre/')) details(parseInt(path.slice(6),10));
+  else if (path === 'resultats') results(p.get('q') || '');
+  else if (path === 'wishlist') wishlist();
+  else if (path === 'identification') ident(p.get('retour'));
+  else home();
+  window.scrollTo(0,0);
+}
+document.addEventListener('submit', ev => {
+  if (ev.target.id === 'sf'){ ev.preventDefault(); location.hash = '#/resultats?q=' + encodeURIComponent(new FormData(ev.target).get('q')); }
+});
+window.addEventListener('hashchange', route); route();
+</script>
+</body>
+</html>
