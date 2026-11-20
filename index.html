@@ -3,9 +3,194 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bibliothèque en Ligne — Démo</title>
+  <title>Bibliothèque en Ligne - Démo</title>
   <meta name="description" content="Démo statique de la Bibliothèque en Ligne (version PHP/MySQL dans le dépôt).">
-  <link rel="stylesheet" href="assets/style.css">
+  <style>
+/* assets/style.css
+   Écoconception : aucune police ni bibliothèque externe chargée
+   (polices système uniquement), pas d'image lourde, CSS unique et léger. */
+
+:root{
+  --bg:#f4f5f7;
+  --panel:#ffffff;
+  --text:#1a1f2b;
+  --muted:#6b7280;
+  --border:#e2e5ea;
+  --navy:#0d1b2a;
+  --navy-2:#14283c;
+  --gold:#d4af37;
+  --ok-bg:#e8f5e9; --ok-text:#1b5e20; --ok-border:#a5d6a7;
+  --err-bg:#fdecea; --err-text:#b00020; --err-border:#f5b5ac;
+  --radius:10px;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+a{ color: var(--navy-2); }
+
+/* ---------- Barre de navigation ---------- */
+.nav{
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.nav .brand{
+  font-weight: 700;
+  font-size: 1.15rem;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-decoration:none;
+  color: #fff;
+}
+.nav .brand .logo{ color: var(--gold); }
+.nav .liens{ display:flex; gap: 6px; flex-wrap: wrap; }
+.nav .liens a{
+  color: #eef2f6;
+  text-decoration:none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+}
+.nav .liens a:hover{ background: rgba(212,175,55,0.18); }
+.nav .lecteur{ font-size: 0.85rem; color: #cbd5e1; }
+.nav .lecteur a{ color: var(--gold); }
+
+/* ---------- Structure générale ---------- */
+.container{
+  max-width: 960px;
+  margin: 28px auto;
+  padding: 0 16px;
+}
+
+.hero{
+  background: linear-gradient(150deg, var(--navy-2), var(--navy));
+  color: #eef2f6;
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  margin-bottom: 22px;
+}
+.hero h1{ margin:0 0 8px; font-size: 1.6rem; }
+.hero p{ margin:0; color:#c7d0dd; max-width: 60ch; }
+
+h1{ font-size: 1.4rem; color: var(--navy-2); }
+h2{ font-size: 1.15rem; color: var(--navy-2); margin-top: 26px; }
+
+.hint{ color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- Formulaires ---------- */
+label{ display:block; margin: 12px 0 6px; font-weight: 600; }
+input[type="text"], input[type="search"], input[type="email"], input[type="number"],
+input:not([type]), textarea, select{
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 1rem;
+  background: var(--panel);
+}
+textarea{ min-height: 100px; resize: vertical; }
+
+.recherche{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.recherche input{ flex:1; min-width: 220px; }
+
+.btn{
+  display:inline-block;
+  padding: 9px 16px;
+  border:0;
+  border-radius: var(--radius);
+  background: var(--gold);
+  color:#241c04;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.btn:hover{ filter: brightness(1.05); }
+.btn.secondary{ background: transparent; color: var(--navy-2); border: 1px solid var(--border); }
+.btn.secondary:hover{ background: #eef1f5; }
+.btn.danger{ background: #b00020; color: #fff; }
+.btn[disabled]{ opacity: .55; cursor: not-allowed; }
+
+/* ---------- Alertes ---------- */
+.alert{ padding: 10px 14px; border-radius: var(--radius); margin: 14px 0; border: 1px solid transparent; }
+.alert.ok{ background: var(--ok-bg); color: var(--ok-text); border-color: var(--ok-border); }
+.alert.error{ background: var(--err-bg); color: var(--err-text); border-color: var(--err-border); }
+
+/* ---------- Cartes livres (grille responsive) ---------- */
+.grille-livres{
+  display:grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  margin: 18px 0;
+}
+.carte-livre{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+.carte-livre h3{ margin:0; font-size: 1.05rem; color: var(--navy-2); }
+.carte-livre .auteur{ color: var(--muted); font-size: 0.9rem; }
+.carte-livre .dispo{ font-size: 0.82rem; font-weight: 600; }
+.carte-livre .dispo.oui{ color: var(--ok-text); }
+.carte-livre .dispo.non{ color: var(--err-text); }
+.carte-livre .actions{ margin-top: auto; display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ---------- Tableau (gestion des livres) ---------- */
+table{ border-collapse: collapse; width: 100%; margin: 14px 0; background: var(--panel); }
+th, td{ border: 1px solid var(--border); padding: 8px 10px; text-align: left; font-size: 0.92rem; }
+th{ background: var(--navy-2); color: #fff; }
+
+/* ---------- Fiche détail ---------- */
+.fiche{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.fiche dl{ display:grid; grid-template-columns: 160px 1fr; gap: 8px 14px; margin: 14px 0; }
+.fiche dt{ font-weight: 600; color: var(--muted); }
+.fiche dd{ margin:0; }
+
+small{ display:block; margin-top: 4px; }
+
+.footer{ text-align:center; color: var(--muted); font-size: 0.85rem; padding: 24px 16px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px){
+  .fiche dl{ grid-template-columns: 1fr; }
+  .nav{ flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------- Respect des préférences de mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; }
+}
+
+</style>
 </head>
 <body>
 <nav class="nav">
